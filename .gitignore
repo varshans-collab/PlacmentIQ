@@ -1,0 +1,16 @@
+venv/
+.venv/
+frontend/node_modules/
+__pycache__/
+*.pyc
+.env
+.env.*
+!.env.example
+.vscode/
+.idea/
+.DS_Store
+dist/
+frontend/dist/
+*.log
+
+placement_iq.db

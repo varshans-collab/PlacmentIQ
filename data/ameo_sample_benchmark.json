@@ -1,0 +1,25 @@
+{
+  "dataset_name": "AMEO 2015 (Aspiring Minds Employment Outcome 2015)",
+  "provenance_type": "OBSERVED",
+  "sample_size": 4000,
+  "year": 2015,
+  "description": "Public national benchmark dataset for engineering employability assessment.",
+  "benchmarks": {
+    "median_salary_inr": 330000,
+    "quant_aptitude_mean": 510,
+    "english_communication_mean": 525,
+    "logical_reasoning_mean": 500,
+    "domain_programming_mean": 450,
+    "top_10_percentile": {
+      "cgpa": 8.8,
+      "quant_aptitude": 8.5,
+      "logical_aptitude": 8.5,
+      "coding_score": 8.8,
+      "communication_score": 8.2,
+      "python_score": 8.5,
+      "sql_score": 8.5,
+      "projects": 4,
+      "internships": 2
+    }
+  }
+}

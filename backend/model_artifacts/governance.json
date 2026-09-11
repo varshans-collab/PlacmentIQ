@@ -1,0 +1,55 @@
+{
+  "dataset_name": "Layer B Synthetic Institutional Dataset",
+  "total_records": 5000,
+  "train_records": 4000,
+  "test_records": 1000,
+  "feature_count": 25,
+  "model_type": "CalibratedClassifierCV (RandomForestClassifier)",
+  "calibration_method": "Platt Sigmoidal Calibration",
+  "training_seed": 42,
+  "metrics": {
+    "accuracy": 0.693,
+    "precision": 0.7131,
+    "recall": 0.8393,
+    "f1_score": 0.7711,
+    "roc_auc": 0.737,
+    "confusion_matrix": [
+      [
+        176,
+        208
+      ],
+      [
+        99,
+        517
+      ]
+    ]
+  },
+  "feature_importances": {
+    "cgpa": 0.095,
+    "tenth_percentage": 0.0726,
+    "twelfth_percentage": 0.0639,
+    "backlogs": 0.0063,
+    "python_score": 0.0503,
+    "java_score": 0.0419,
+    "sql_score": 0.0415,
+    "dsa_score": 0.0644,
+    "cloud_score": 0.0384,
+    "web_score": 0.0553,
+    "ml_score": 0.037,
+    "cybersecurity_score": 0.0357,
+    "certifications": 0.017,
+    "project_count": 0.0229,
+    "project_complexity": 0.0272,
+    "internships": 0.0173,
+    "opensource_projects": 0.0079,
+    "quantitative_aptitude": 0.0394,
+    "logical_aptitude": 0.044,
+    "coding_score": 0.0742,
+    "communication_score": 0.0369,
+    "presentation_score": 0.0393,
+    "interview_score": 0.0575,
+    "hackathons": 0.0108,
+    "leadership": 0.0034
+  },
+  "expected_value": 0.6165770833333335
+}
