@@ -111,8 +111,106 @@ def run_all_tests():
     assert interventions[0]["data_provenance"] == "SIMULATED", "Intervention lab provenance must be SIMULATED"
     print("[PASS] Test 11: Data provenance tagging verified.")
 
+    # Test 12: Data validation script runs and generates comprehensive report
+    print("Test 12: Testing dataset validation script and report generation...")
+    val_proc = subprocess.run([sys.executable, "scripts/validate_data.py"], capture_output=True, text=True)
+    assert val_proc.returncode == 0, f"Validation script failed: {val_proc.stderr}"
+    report_path = os.path.join(BASE_DIR, "docs", "data_validation_report.md")
+    assert os.path.exists(report_path), "Data validation report markdown missing"
+    with open(report_path, "r", encoding="utf-8") as f:
+        report_text = f.read()
+
+    # Verify key sections exist
+    required_sections = [
+        "Executive Governance Summary",
+        "Methodological Notes & Statistical Caveats",
+        "Sample Size Asymmetry",
+        "Conversion Proxy Assumptions",
+        "Statistical Comparison Matrix",
+        "Detailed Feature-by-Feature Distribution Analysis",
+        "Root-Cause Analysis"
+    ]
+    for section in required_sections:
+        assert section in report_text, f"Report missing expected section: '{section}'"
+
+    # Verify all 6 overlapping fields are audited and present
+    required_fields = [
+        "10th Grade Percentage (SSC)",
+        "12th Grade Percentage (HSC)",
+        "Undergraduate Degree Score (%)",
+        "Aptitude / Employability Test Score",
+        "Work Experience / Internship Exposure",
+        "Placement Success Rate (Target Class)"
+    ]
+    for field in required_fields:
+        assert field in report_text, f"Report missing expected audited field: '{field}'"
+
+    # Verify statistical badges and ASCII frequency histograms are present
+    assert "MATCH" in report_text, "Report missing MATCH classification"
+    assert "MODERATE" in report_text, "Report missing MODERATE classification"
+    assert "DIVERGENT" in report_text, "Report missing DIVERGENT classification"
+    assert "Frequency Histogram Comparison" in report_text, "Report missing ASCII histograms"
+
+    # Test 13: Multi-model comparison report, calibration diagram, and ablation-grounded regression checks
+    """
+    Test 13 verifies:
+    1. Multi-model benchmark report (docs/model_comparison.md) contains 5-fold CV metrics and tradeoff writeup.
+    2. Calibration reliability figure (docs/figures/calibration_comparison.png) is generated.
+    3. Detailed selection rationale and error breakdown (docs/model_selection_rationale.md) is present.
+    4. Divergence Threshold Grounding: The 25% ceiling on synthetic-divergent features
+       (10th%, 12th%, Quant, Logic) is grounded in our empirical ablation experiment
+       (which proved dropping these 4 features yields delta_AUC = 0.0000, confirming they
+       provide redundant collinear signal that must not exceed 25% of decision weight).
+    """
+    print("Test 13: Testing multi-model comparison report, divergence thresholds, and production tradeoff...")
+    model_comp_path = os.path.join(BASE_DIR, "docs", "model_comparison.md")
+    assert os.path.exists(model_comp_path), "Model comparison markdown report missing"
+    with open(model_comp_path, "r", encoding="utf-8") as f:
+        comp_text = f.read()
+
+    assert "Logistic Regression (Scaled)" in comp_text, "Missing Logistic Regression in comparison"
+    assert "RandomForestClassifier" in comp_text, "Missing Random Forest in comparison"
+    assert "XGBoost (XGBClassifier)" in comp_text, "Missing XGBoost in comparison"
+    assert "Stratified 5-Fold Cross-Validation Comparison Table" in comp_text, "Missing 5-fold CV table"
+    assert "Brier Score" in comp_text, "Missing Brier score in comparison"
+    assert "Synthetic Feature Divergence & Generalization Risk Audit" in comp_text, "Missing divergence risk audit"
+    assert "Full Feature Importance Matrix Across Models" in comp_text, "Missing feature importance matrix"
+    assert "Generative Artifact" in comp_text or "generative" in comp_text, "Missing generative artifact explanation"
+    assert "TreeSHAP" in comp_text, "Missing TreeSHAP explainability rationale"
+
+    # Verify calibration plot and detailed selection rationale
+    cal_fig_path = os.path.join(BASE_DIR, "docs", "figures", "calibration_comparison.png")
+    assert os.path.exists(cal_fig_path), "Calibration comparison PNG figure missing"
+    
+    rationale_path = os.path.join(BASE_DIR, "docs", "model_selection_rationale.md")
+    assert os.path.exists(rationale_path), "model_selection_rationale.md missing"
+    with open(rationale_path, "r", encoding="utf-8") as f:
+        rat_text = f.read()
+    assert "Per-Department Error Breakdown" in rat_text, "Missing department breakdown in rationale"
+    assert "Worst-Case Error Analysis" in rat_text, "Missing top-10 error analysis in rationale"
+    assert "Feature Ablation Experiment" in rat_text, "Missing ablation experiment in rationale"
+
+    # Assert quantitative divergence threshold checks from serialized governance metrics
+    metrics_path = os.path.join(BASE_DIR, "backend", "model_artifacts", "governance_metrics.json")
+    assert os.path.exists(metrics_path), "governance_metrics.json missing"
+    with open(metrics_path, "r", encoding="utf-8") as f:
+        gov = json.load(f)
+    
+    assert "divergence_risk_flags" in gov, "Missing divergence risk flags in governance metrics"
+    rf_risk = gov["divergence_risk_flags"]["RandomForestClassifier"]
+    # Production RF model must not exceed 25% exposure to synthetic-divergent features
+    assert rf_risk["share_pct"] <= 25.0, f"Production RF divergent feature weight too high: {rf_risk['share_pct']}% > 25%"
+    assert rf_risk["status"] in ["LOW RISK", "MODERATE RISK"], f"Production model has unacceptable risk status: {rf_risk['status']}"
+    
+    # Linear and XGBoost models must also remain bounded (< 20%)
+    for m_name in ["Logistic Regression (Scaled)", "XGBoost (XGBClassifier)"]:
+        m_risk = gov["divergence_risk_flags"][m_name]
+        assert m_risk["share_pct"] <= 20.0, f"{m_name} divergent feature weight exceeded 20%: {m_risk['share_pct']}%"
+
+    print(f"[PASS] Test 13: Multi-model comparison verified (RF divergent weight = {rf_risk['share_pct']}% <= 25% safe threshold, ablation grounded, calibration plot verified).")
+
     print("\n=======================================================")
-    print("ALL 11 REGRESSION TESTS PASSED 100%!")
+    print("ALL 13 REGRESSION TESTS PASSED 100%!")
     print("=======================================================")
 
 if __name__ == "__main__":

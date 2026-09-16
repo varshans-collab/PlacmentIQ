@@ -1,8 +1,17 @@
 import os
+import sys
 import json
 import random
 import numpy as np
 import pandas as pd
+
+# Ensure UTF-8 output across all consoles/platforms
+if sys.stdout.encoding != 'utf-8':
+    try:
+        sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+        sys.stderr.reconfigure(encoding='utf-8', errors='replace')
+    except Exception:
+        pass
 
 # Set fixed seed for perfect reproducibility
 np.random.seed(42)

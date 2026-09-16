@@ -55,5 +55,11 @@
     "leadership": "numeric"
   },
   "target": "placed",
-  "provenance": "SYNTHETIC_LAYER_B"
+  "provenance": "SYNTHETIC_LAYER_B",
+  "divergent_features": [
+    "tenth_percentage",
+    "twelfth_percentage",
+    "quantitative_aptitude",
+    "logical_aptitude"
+  ]
 }

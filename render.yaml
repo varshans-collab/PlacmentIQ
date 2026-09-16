@@ -1,0 +1,15 @@
+# render.yaml - place this in the ROOT of the repo
+# Render will auto-detect this file and offer to deploy from it.
+# Docs: https://render.com/docs/blueprint-spec
+
+services:
+  - type: web
+    name: placementiq-backend
+    env: python
+    region: oregon        # change if you want a region closer to you
+    plan: free
+    buildCommand: "pip install -r backend/requirements.txt"
+    startCommand: "uvicorn app.main:app --host 0.0.0.0 --port $PORT --app-dir backend"
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0

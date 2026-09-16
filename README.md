@@ -23,34 +23,47 @@ Student Cohort → Placement Funnel Simulation → Selection Bottleneck Detectio
 
 ---
 
-## 2. Three-Layer Data Provenance System
+## 2. Three-Layer Data Provenance System & Empirical Validation
 
-PlacementIQ enforces explicit data layer boundaries and visual provenance badges across every screen and API response:
+PlacementIQ enforces explicit data layer boundaries, empirical validation protocols, and visual provenance badges across every screen and API response:
 
-- **`[OBSERVED]`** — Historical public source data (**AMEO 2015 / Aspiring Minds Employment Outcome 2015**). Used strictly for national median salary and percentile benchmark references.
+- **`[OBSERVED]`** — Historical public source data (**AMEO 2015 / Aspiring Minds Employment Outcome 2015** and **Kaggle Campus Recruitment Benchmark Dataset** `Placement_Data_Full_Class.csv`). Used for national median salary benchmarks, percentile curves, and empirical validation baselines.
 - **`[SYNTHETIC]`** — Computer-generated institutional prototype data (**5,000 training records** + **610-student institutional demonstration cohort** generated with deterministic seed `42`). Includes fictional demo personas **Ananya (ECE)**, **Rahul (CSE)**, and **Priya (CSE)**.
 - **`[DERIVED]`** — Calculated indicators and gap analyses (Career Track Fit, Evidence Confidence, Profile Completeness, "Why Not Yet?" Gaps).
 - **`[SIMULATED]`** — Counterfactual future scenarios dynamically generated during What-If slider changes, Opportunity Cost calculations, Placement Flight Simulator funnels, and Intervention Lab experiments.
+
+### Empirical Data Validation & Governance
+To ensure data integrity and guard against unrealistic synthetic distributions, PlacementIQ includes an automated statistical validation pipeline ([`scripts/validate_data.py`](file:///scripts/validate_data.py)) that audits synthetic training data against real-world recruitment data ([`Placement_Data_Full_Class.csv`](file:///data/Placement_Data_Full_Class.csv)):
+- **Two-Sample Kolmogorov-Smirnov (KS) Tests** & **Wasserstein-1 ($L_1$) Distances** across overlapping academic and outcome dimensions.
+- **Audit Findings**:
+  - `[MATCH]` **Work Experience Rate**: Empirical 34.4% vs Synthetic 36.0% (KS $D = 0.016$, $p = 1.00$).
+  - `[MODERATE]` **Degree Score**: Converted CGPA proxy ($\text{CGPA} \times 9.5$) aligns closely in median ($70.4\%$ vs $66.0\%$) and IQR (KS $D = 0.243$).
+  - `[MODERATE]` **Placement Rate**: Calibrated at 61.6% (vs real 68.8%) to mitigate class imbalance.
+  - `[DIVERGENT]` **10th%/12th% School Percentiles & Aptitude**: Synthetic engineering percentiles (mean ~75%) reflect technical entrance cutoffs vs general multi-stream Kaggle baseline (mean ~66%), and synthetic aptitude enforces technical screening cutoffs.
+- **Methodological Caveat**: With $N_1 = 215$ vs $N_2 = 5{,}000$, KS tests possess near-maximal statistical power ($D_{\text{crit}} \approx 0.113$ at $\alpha=0.01$), flagging demographic stream differences rather than dataset defect.
+- **Automated Governance Report**: Published to [`docs/data_validation_report.md`](file:///docs/data_validation_report.md).
 
 ---
 
 ## 3. Real Machine Learning & XAI Architecture
 
-1. **Model Pipeline**: `RandomForestClassifier` (120 estimators, max depth 12) calibrated via `CalibratedClassifierCV` using 5-fold cross-validated **Platt Sigmoidal Calibration**.
-2. **Model Target**: Binary `placed = 0/1`. Output is calibrated probability $P(\text{placed}=1)$, converted to **Estimated Placement Readiness Score** ($0 - 100\%$).
-3. **Local Explainability**: `shap.TreeExplainer` loaded from serialized `shap_explainer.joblib`. Dynamically attributes positive (+SHAP) and negative (-SHAP) feature contributions relative to the baseline expected value.
-4. **Offline Training Workflow**:
+1. **Multi-Model Benchmark & Cross-Validation**: PlacementIQ evaluates three distinct model families using stratified 5-fold cross-validation on Layer B synthetic data (documented in [`docs/model_comparison.md`](file:///docs/model_comparison.md)):
+   - **Logistic Regression (Scaled)**: ROC-AUC **$0.7725 \pm 0.0091$**, Accuracy $71.96 \pm 1.63\%$, Brier Score $0.1854 \pm 0.0035$ (`🟢 LOW RISK` on divergent features, 9.05% weight share).
+   - **XGBoost (XGBClassifier)**: ROC-AUC **$0.7612 \pm 0.0105$**, Accuracy $70.60 \pm 1.53\%$, Brier Score $0.1898 \pm 0.0040$ (`🟢 LOW RISK` on divergent features, 9.60% weight share).
+   - **RandomForestClassifier**: ROC-AUC **$0.7538 \pm 0.0126$**, Accuracy $70.66 \pm 1.49\%$, Brier Score $0.1925 \pm 0.0040$ (`🟡 MODERATE RISK` on divergent features, 22.51% weight share).
+2. **Production Model Architecture & Engineering Tradeoff**:
+   - `CalibratedClassifierCV(RandomForestClassifier)` (120 estimators, max depth 12) is deliberately chosen as the production model over Logistic Regression.
+   - *Why?* On our synthetic data, Logistic Regression slightly edges out tree ensembles on ROC-AUC ($0.773$ vs $0.754$) because synthetic labels were generated via a logistic sigmoid link function, which naturally favors generalized linear models. We do not expect this linear ranking to hold on real-world placement data with threshold non-linearities (e.g., passing a hard DSA bar offsetting low academic scores).
+   - *The Tradeoff:* We trade $\sim 0.019$ raw ROC-AUC points to gain **exact, unapproximated TreeSHAP attributions** (`shap.TreeExplainer`) and native non-linear interaction modeling, which are core requirements for the *What-If Simulator* and *Why Not Yet?* gap diagnostic engines.
+3. **Model Target**: Binary `placed = 0/1`. Output is calibrated probability $P(\text{placed}=1)$, converted to **Estimated Placement Readiness Score** ($0 - 100\%$).
+4. **Local Explainability**: `shap.TreeExplainer` loaded from serialized `shap_explainer.joblib`. Dynamically attributes positive (+SHAP) and negative (-SHAP) feature contributions relative to the baseline expected value.
+5. **Offline Training & Validation Workflow**:
    ```bash
    python scripts/generate_data.py
+   python scripts/validate_data.py
    python scripts/train_model.py
    python scripts/evaluate_model.py
    ```
-5. **Model Evaluation Metrics** (Generated from 20% test split):
-   - **Accuracy**: 76.90%
-   - **Precision**: 72.19%
-   - **Recall**: 68.01%
-   - **F1 Score**: 70.04%
-   - **ROC-AUC**: 0.8292
 
 ---
 
@@ -104,13 +117,16 @@ pip install -r backend/requirements.txt
 # 2. Generate Layer B data (5,000 training, 610 demo cohort, AMEO metadata)
 python scripts/generate_data.py
 
-# 3. Train Calibrated Random Forest & SHAP Explainer
+# 3. Validate synthetic data against real benchmark dataset
+python scripts/validate_data.py
+
+# 4. Train Calibrated Random Forest & SHAP Explainer
 python scripts/train_model.py
 
-# 4. Evaluate trained artifacts
+# 5. Evaluate trained artifacts
 python scripts/evaluate_model.py
 
-# 5. Start FastAPI Backend Server (Port 8000)
+# 6. Start FastAPI Backend Server (Port 8000)
 python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload --app-dir backend
 ```
 

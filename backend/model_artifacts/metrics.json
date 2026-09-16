@@ -5,14 +5,152 @@
   "test_records": 1000,
   "feature_count": 25,
   "model_type": "CalibratedClassifierCV (RandomForestClassifier)",
+  "production_model": "CalibratedClassifierCV (RandomForestClassifier)",
   "calibration_method": "Platt Sigmoidal Calibration",
   "training_seed": 42,
+  "cv_5fold_summary": {
+    "Logistic Regression (Scaled)": {
+      "accuracy": {
+        "mean": 0.7196,
+        "std": 0.016304600577751068,
+        "formatted": "0.7196 +/- 0.0163"
+      },
+      "precision": {
+        "mean": 0.7423050149611314,
+        "std": 0.013213879483557766,
+        "formatted": "0.7423 +/- 0.0132"
+      },
+      "recall": {
+        "mean": 0.8343173899271459,
+        "std": 0.012290785342588347,
+        "formatted": "0.8343 +/- 0.0123"
+      },
+      "f1": {
+        "mean": 0.7855928604343391,
+        "std": 0.011832482714180364,
+        "formatted": "0.7856 +/- 0.0118"
+      },
+      "roc_auc": {
+        "mean": 0.772508173800285,
+        "std": 0.009097541990917661,
+        "formatted": "0.7725 +/- 0.0091"
+      },
+      "brier": {
+        "mean": 0.18535792998003056,
+        "std": 0.0034915811490947544,
+        "formatted": "0.1854 +/- 0.0035"
+      }
+    },
+    "RandomForestClassifier": {
+      "accuracy": {
+        "mean": 0.7066,
+        "std": 0.014947909552843851,
+        "formatted": "0.7066 +/- 0.0149"
+      },
+      "precision": {
+        "mean": 0.7316617321070294,
+        "std": 0.009724612318733469,
+        "formatted": "0.7317 +/- 0.0097"
+      },
+      "recall": {
+        "mean": 0.8265241262802239,
+        "std": 0.018034259284505326,
+        "formatted": "0.8265 +/- 0.0180"
+      },
+      "f1": {
+        "mean": 0.7761517778454698,
+        "std": 0.012196258084313799,
+        "formatted": "0.7762 +/- 0.0122"
+      },
+      "roc_auc": {
+        "mean": 0.753825096016788,
+        "std": 0.012614684510255759,
+        "formatted": "0.7538 +/- 0.0126"
+      },
+      "brier": {
+        "mean": 0.19246554874140487,
+        "std": 0.004027614701575567,
+        "formatted": "0.1925 +/- 0.0040"
+      }
+    },
+    "XGBoost (XGBClassifier)": {
+      "accuracy": {
+        "mean": 0.706,
+        "std": 0.015270887335056873,
+        "formatted": "0.7060 +/- 0.0153"
+      },
+      "precision": {
+        "mean": 0.7303097497648675,
+        "std": 0.00844175639243127,
+        "formatted": "0.7303 +/- 0.0084"
+      },
+      "recall": {
+        "mean": 0.8281485587583148,
+        "std": 0.019502318152272,
+        "formatted": "0.8281 +/- 0.0195"
+      },
+      "f1": {
+        "mean": 0.7761140411230063,
+        "std": 0.012786953114548218,
+        "formatted": "0.7761 +/- 0.0128"
+      },
+      "roc_auc": {
+        "mean": 0.7612262069739204,
+        "std": 0.010536211070536422,
+        "formatted": "0.7612 +/- 0.0105"
+      },
+      "brier": {
+        "mean": 0.18980644643306732,
+        "std": 0.0039688240344274124,
+        "formatted": "0.1898 +/- 0.0040"
+      }
+    }
+  },
+  "divergence_risk_flags": {
+    "Logistic Regression (Scaled)": {
+      "share_pct": 9.05,
+      "status": "LOW RISK",
+      "badge": "\ud83d\udfe2 LOW RISK",
+      "note": "Only 9.0% weight on divergent features. Strong reliance on core competencies."
+    },
+    "RandomForestClassifier": {
+      "share_pct": 22.51,
+      "status": "MODERATE RISK",
+      "badge": "\ud83d\udfe1 MODERATE RISK",
+      "note": "22.5% weight on divergent features. Moderate exposure to academic baseline shifts."
+    },
+    "XGBoost (XGBClassifier)": {
+      "share_pct": 9.6,
+      "status": "LOW RISK",
+      "badge": "\ud83d\udfe2 LOW RISK",
+      "note": "Only 9.6% weight on divergent features. Strong reliance on core competencies."
+    }
+  },
   "metrics": {
     "accuracy": 0.693,
     "precision": 0.7131,
     "recall": 0.8393,
     "f1_score": 0.7711,
     "roc_auc": 0.737,
+    "brier_score": 0.1988,
+    "confusion_matrix": [
+      [
+        176,
+        208
+      ],
+      [
+        99,
+        517
+      ]
+    ]
+  },
+  "test_split_metrics": {
+    "accuracy": 0.693,
+    "precision": 0.7131,
+    "recall": 0.8393,
+    "f1_score": 0.7711,
+    "roc_auc": 0.737,
+    "brier_score": 0.1988,
     "confusion_matrix": [
       [
         176,
