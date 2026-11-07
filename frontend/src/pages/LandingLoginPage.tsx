@@ -45,15 +45,19 @@ export const LandingLoginPage: React.FC<Props> = ({ onLoginSuccess }) => {
     try {
       // Call backend auth API
       const res = await loginApi(email, password, targetRole);
-      if (res.authenticated) {
-        onLoginSuccess(res.role, res.user);
+      if (res && res.authenticated) {
+        if (res.access_token) {
+          sessionStorage.setItem('placementiq_token', res.access_token);
+        }
+        const roleKey: 'student' | 'rpo_tpo' = res.role === 'student' ? 'student' : 'rpo_tpo';
+        onLoginSuccess(roleKey, res.user);
       } else {
         setError('Incorrect login details. Please try again.');
       }
     } catch (err: any) {
       // Fallback for hackathon demo if backend offline or error
       if (targetRole === 'student') {
-        if ((email.trim().toLowerCase() === 'student@placementiq.demo' || email.trim().toLowerCase().startsWith('st_')) && password === 'student123') {
+        if ((email.trim().toLowerCase() === 'student@placementiq.demo' || email.trim().toLowerCase().startsWith('st_')) && (password === 'student123' || password === 'demo123')) {
           const studentId = email.toLowerCase().startsWith('st_') ? email.toUpperCase() : 'ST_DEMO_001';
           onLoginSuccess('student', {
             email: email,
@@ -61,7 +65,7 @@ export const LandingLoginPage: React.FC<Props> = ({ onLoginSuccess }) => {
             name: studentId === 'ST_DEMO_001' ? 'Ananya Sharma' : studentId
           });
         } else {
-          setError('Incorrect login details. Please try again.');
+          setError(err?.message || 'Incorrect login details. Please try again.');
         }
       } else {
         if ((email.trim().toLowerCase() === 'tpo@placementiq.demo' || email.trim().toLowerCase() === 'rpo@placementiq.demo') && password === 'tpo123') {
@@ -71,7 +75,7 @@ export const LandingLoginPage: React.FC<Props> = ({ onLoginSuccess }) => {
             name: 'Institutional Placement Officer'
           });
         } else {
-          setError('Incorrect login details. Please try again.');
+          setError(err?.message || 'Incorrect login details. Please try again.');
         }
       }
     } finally {
@@ -79,7 +83,19 @@ export const LandingLoginPage: React.FC<Props> = ({ onLoginSuccess }) => {
     }
   };
 
-  const handleDemoStudentLogin = () => {
+  const handleDemoStudentLogin = async () => {
+    try {
+      const res = await loginApi('student@placementiq.demo', 'demo123', 'student');
+      if (res && res.authenticated) {
+        if (res.access_token) {
+          sessionStorage.setItem('placementiq_token', res.access_token);
+        }
+        onLoginSuccess('student', res.user);
+        return;
+      }
+    } catch (e) {
+      // Fallback
+    }
     onLoginSuccess('student', {
       email: 'student@placementiq.demo',
       id: 'ST_DEMO_001',
@@ -87,7 +103,19 @@ export const LandingLoginPage: React.FC<Props> = ({ onLoginSuccess }) => {
     });
   };
 
-  const handleDemoTpoLogin = () => {
+  const handleDemoTpoLogin = async () => {
+    try {
+      const res = await loginApi('tpo@placementiq.demo', 'tpo123', 'rpo_tpo');
+      if (res && res.authenticated) {
+        if (res.access_token) {
+          sessionStorage.setItem('placementiq_token', res.access_token);
+        }
+        onLoginSuccess('rpo_tpo', res.user);
+        return;
+      }
+    } catch (e) {
+      // Fallback
+    }
     onLoginSuccess('rpo_tpo', {
       email: 'tpo@placementiq.demo',
       id: 'TPO_ADMIN_001',

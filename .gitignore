@@ -14,3 +14,5 @@ frontend/dist/
 *.log
 
 placement_iq.db
+
+*.db

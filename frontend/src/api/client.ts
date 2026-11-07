@@ -16,6 +16,21 @@ const apiClient = axios.create({
   timeout: 10000
 });
 
+// Request interceptor to attach JWT access token
+apiClient.interceptors.request.use(
+  (config) => {
+    const token = sessionStorage.getItem('placementiq_token');
+    if (token) {
+      config.headers = config.headers || {};
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
 // Response interceptor for clean error handling
 apiClient.interceptors.response.use(
   (response) => response,
@@ -175,8 +190,26 @@ export const fetchModelGovernance = async (): Promise<GovernanceMetricsResponse>
   return res.data;
 };
 
-export const loginApi = async (email: string, password: string, role: string) => {
+export const loginApi = async (email: string, password: string, role?: string) => {
   const res = await apiClient.post(`${API_BASE}/auth/login`, { email, password, role });
   return res.data;
 };
+
+export const getMeApi = async () => {
+  const res = await apiClient.get(`${API_BASE}/auth/me`);
+  return res.data;
+};
+
+export const registerApi = async (data: {
+  email: string;
+  password: string;
+  name: string;
+  role?: string;
+  department?: string;
+  target_role?: string;
+}) => {
+  const res = await apiClient.post(`${API_BASE}/auth/register`, data);
+  return res.data;
+};
+
 

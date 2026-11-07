@@ -3,11 +3,16 @@ import numpy as np
 from fastapi import APIRouter, Depends
 from app.database import get_db
 from app.services.model_service import model_service
+from app.services.auth_service import require_tpo
 
 router = APIRouter(prefix="/api/tpo", tags=["tpo"])
 
 @router.get("/overview")
-def get_tpo_overview(dept: str = None, db: sqlite3.Connection = Depends(get_db)):
+def get_tpo_overview(
+    dept: str = None,
+    db: sqlite3.Connection = Depends(get_db),
+    current_user: dict = Depends(require_tpo)
+):
     cursor = db.cursor()
     query = "SELECT * FROM students"
     params = []
@@ -92,7 +97,8 @@ def get_skill_heatmap(
     dept: str = None,
     semester: int = None,
     role: str = None,
-    db: sqlite3.Connection = Depends(get_db)
+    db: sqlite3.Connection = Depends(get_db),
+    current_user: dict = Depends(require_tpo)
 ):
     cursor = db.cursor()
     query = "SELECT * FROM students WHERE 1=1"
@@ -172,7 +178,8 @@ def get_vulnerable_students(
     skill_deficit: str = None,
     risk_level: str = None,
     sort_by: str = "readiness_asc",
-    db: sqlite3.Connection = Depends(get_db)
+    db: sqlite3.Connection = Depends(get_db),
+    current_user: dict = Depends(require_tpo)
 ):
     cursor = db.cursor()
     cursor.execute("SELECT * FROM students")

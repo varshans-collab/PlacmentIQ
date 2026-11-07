@@ -1,9 +1,51 @@
 import os
+import json
+from typing import List, Union
+from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import field_validator
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 DATA_DIR = os.path.join(BASE_DIR, "data")
 ARTIFACTS_DIR = os.path.join(BASE_DIR, "backend", "model_artifacts")
 DB_PATH = os.path.join(BASE_DIR, "backend", "placementiq.db")
+
+
+class Settings(BaseSettings):
+    DATABASE_URL: str = "sqlite:///backend/placementiq.db"
+    JWT_SECRET: str = "dev-secret-key-placeholder-change-in-production"
+    JWT_ALGORITHM: str = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 1440
+    CORS_ORIGINS: Union[List[str], str] = [
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://localhost:3000",
+        "http://127.0.0.1:3000"
+    ]
+    ENVIRONMENT: str = "development"
+    FRONTEND_URL: str = "http://localhost:5173"
+
+    @field_validator("CORS_ORIGINS", mode="before")
+    @classmethod
+    def assemble_cors_origins(cls, v: Union[str, List[str]]) -> List[str]:
+        if isinstance(v, str):
+            v_trimmed = v.strip()
+            if v_trimmed.startswith("[") and v_trimmed.endswith("]"):
+                try:
+                    return json.loads(v_trimmed)
+                except Exception:
+                    pass
+            return [origin.strip() for origin in v.split(",") if origin.strip()]
+        return v
+
+    model_config = SettingsConfigDict(
+        env_file=os.path.join(BASE_DIR, ".env"),
+        env_file_encoding="utf-8",
+        case_sensitive=True,
+        extra="ignore"
+    )
+
+
+settings = Settings()
 
 FEATURE_COLUMNS = [
     "cgpa", "tenth_percentage", "twelfth_percentage", "backlogs",

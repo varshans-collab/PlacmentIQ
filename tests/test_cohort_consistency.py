@@ -2,19 +2,38 @@ import urllib.request
 import json
 
 BASE_URL = "http://127.0.0.1:8000"
+AUTH_TOKEN = None
 
-def get_json(endpoint):
+def get_auth_token():
+    global AUTH_TOKEN
+    if AUTH_TOKEN is None:
+        login_data = post_json("/api/auth/login", {
+            "email": "tpo@placementiq.demo",
+            "password": "tpo123",
+            "role": "rpo_tpo"
+        }, auth=False)
+        AUTH_TOKEN = login_data["access_token"]
+    return AUTH_TOKEN
+
+def get_json(endpoint, auth=True):
     url = f"{BASE_URL}{endpoint}"
-    req = urllib.request.Request(url)
+    headers = {}
+    if auth:
+        headers["Authorization"] = f"Bearer {get_auth_token()}"
+    req = urllib.request.Request(url, headers=headers)
     with urllib.request.urlopen(req) as response:
         return json.loads(response.read().decode())
 
-def post_json(endpoint, body):
+def post_json(endpoint, body, auth=True):
     url = f"{BASE_URL}{endpoint}"
     data = json.dumps(body).encode('utf-8')
-    req = urllib.request.Request(url, data=data, headers={'Content-Type': 'application/json'})
+    headers = {'Content-Type': 'application/json'}
+    if auth:
+        headers["Authorization"] = f"Bearer {get_auth_token()}"
+    req = urllib.request.Request(url, data=data, headers=headers)
     with urllib.request.urlopen(req) as response:
         return json.loads(response.read().decode())
+
 
 def test_cross_module_cohort_consistency():
     # 1. Overview API Count

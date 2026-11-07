@@ -6,15 +6,21 @@ from app.config import ARTIFACTS_DIR, DATA_DIR
 from app.database import get_db
 from app.schemas import ResumeExtractRequest, AssessmentSubmitRequest
 from app.services.resume_extractor import extract_resume_skills
+from app.services.auth_service import get_current_user, verify_student_ownership
 
 router = APIRouter(prefix="/api", tags=["tools"])
 
 @router.post("/resume/extract")
-def extract_resume(req: ResumeExtractRequest):
+def extract_resume(req: ResumeExtractRequest, current_user: dict = Depends(get_current_user)):
     return extract_resume_skills(req.resume_text)
 
 @router.post("/assessment")
-def submit_assessment(req: AssessmentSubmitRequest, db: sqlite3.Connection = Depends(get_db)):
+def submit_assessment(
+    req: AssessmentSubmitRequest,
+    db: sqlite3.Connection = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    verify_student_ownership(req.student_id, current_user)
     cursor = db.cursor()
     cursor.execute("""
     INSERT INTO assessment_results (student_id, skill, difficulty, score, passed)

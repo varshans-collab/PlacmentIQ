@@ -7,6 +7,7 @@ import { PlacementSimulator } from './pages/PlacementSimulator';
 import { ModelDataGovernance } from './pages/ModelDataGovernance';
 import { LandingLoginPage } from './pages/LandingLoginPage';
 import { AuthUser } from './types';
+import { getMeApi } from './api/client';
 import { ShieldAlert, AlertTriangle } from 'lucide-react';
 
 export const App: React.FC = () => {
@@ -16,15 +17,39 @@ export const App: React.FC = () => {
   const [selectedPersona, setSelectedPersona] = useState<string>('ST_DEMO_001');
   const [authError, setAuthError] = useState<string | null>(null);
 
-  // Restore session from sessionStorage on page load/refresh
+  // Restore and verify session from backend on page load/refresh
   useEffect(() => {
+    const token = sessionStorage.getItem('placementiq_token');
     const stored = sessionStorage.getItem('placementiq_session');
-    if (stored) {
+
+    if (token) {
+      getMeApi()
+        .then((res) => {
+          if (res && res.user) {
+            const roleKey: 'student' | 'rpo_tpo' = res.user.role === 'student' ? 'student' : 'rpo_tpo';
+            setAuthRole(roleKey);
+            setAuthUser(res.user);
+            if (res.user.student_id) {
+              setSelectedPersona(res.user.student_id);
+            }
+            setActiveTab(roleKey === 'student' ? 'student' : 'tpo');
+          }
+        })
+        .catch(() => {
+          sessionStorage.removeItem('placementiq_session');
+          sessionStorage.removeItem('placementiq_token');
+          setAuthRole(null);
+          setAuthUser(null);
+        });
+    } else if (stored) {
       try {
         const parsed = JSON.parse(stored);
         if (parsed.role && parsed.user) {
           setAuthRole(parsed.role);
           setAuthUser(parsed.user);
+          if (parsed.user.student_id) {
+            setSelectedPersona(parsed.user.student_id);
+          }
           setActiveTab(parsed.role === 'student' ? 'student' : 'tpo');
         }
       } catch (e) {
@@ -36,6 +61,9 @@ export const App: React.FC = () => {
   const handleLoginSuccess = (role: 'student' | 'rpo_tpo', user: AuthUser) => {
     setAuthRole(role);
     setAuthUser(user);
+    if (user.student_id) {
+      setSelectedPersona(user.student_id);
+    }
     sessionStorage.setItem('placementiq_session', JSON.stringify({ role, user }));
     setActiveTab(role === 'student' ? 'student' : 'tpo');
     setAuthError(null);
@@ -43,6 +71,7 @@ export const App: React.FC = () => {
 
   const handleLogout = () => {
     sessionStorage.removeItem('placementiq_session');
+    sessionStorage.removeItem('placementiq_token');
     setAuthRole(null);
     setAuthUser(null);
     setAuthError(null);

@@ -3,6 +3,22 @@ import json
 import os
 from app.config import DB_PATH, DATA_DIR
 
+DEMO_CANONICAL_EMAILS = {
+    "ST_DEMO_001": "ananya@placementiq.demo",
+    "ST_DEMO_002": "rahul@placementiq.demo",
+    "ST_DEMO_003": "priya@placementiq.demo",
+    "ST_DEMO_004": "sneha@placementiq.demo",
+    "ST_DEMO_005": "arjun@placementiq.demo",
+    "ST_DEMO_006": "meera@placementiq.demo",
+    "ST_DEMO_007": "karan@placementiq.demo",
+    "ST_DEMO_008": "divya@placementiq.demo",
+    "ST_DEMO_009": "rohan@placementiq.demo",
+    "ST_DEMO_010": "nisha@placementiq.demo",
+    "ST_DEMO_011": "vivek@placementiq.demo",
+    "ST_DEMO_012": "pooja@placementiq.demo",
+    "ST_DEMO_013": "aditya@placementiq.demo",
+}
+
 def get_db():
     conn = sqlite3.connect(DB_PATH, check_same_thread=False)
     conn.row_factory = sqlite3.Row
@@ -19,6 +35,7 @@ def init_db():
     CREATE TABLE IF NOT EXISTS students (
         student_id TEXT PRIMARY KEY,
         name TEXT,
+        email TEXT,
         department TEXT,
         semester INTEGER,
         cgpa REAL,
@@ -54,6 +71,15 @@ def init_db():
     )
     """)
 
+    # Safe migration: add email column if it doesn't exist on legacy DB files
+    cursor.execute("PRAGMA table_info(students)")
+    existing_columns = [col[1] for col in cursor.fetchall()]
+    if "email" not in existing_columns:
+        cursor.execute("ALTER TABLE students ADD COLUMN email TEXT")
+
+    # Ensure unique email index for fast lookup and strict uniqueness
+    cursor.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_students_email ON students(email) WHERE email IS NOT NULL")
+
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS trajectory_snapshots (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -77,6 +103,24 @@ def init_db():
     )
     """)
 
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        email TEXT UNIQUE NOT NULL,
+        password_hash TEXT NOT NULL,
+        role TEXT NOT NULL,
+        student_id TEXT,
+        is_active INTEGER NOT NULL DEFAULT 1,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(student_id) REFERENCES students(student_id) ON DELETE SET NULL
+    )
+    """)
+
+    cursor.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email ON users(email)")
+
+    seed_demo_users(cursor)
+
     conn.commit()
 
     # Load / Sync 610 student cohort from json
@@ -85,17 +129,20 @@ def init_db():
         with open(demo_json, "r") as f:
             records = json.load(f)
         for r in records:
+            sid = r["student_id"]
+            email_val = r.get("email") or DEMO_CANONICAL_EMAILS.get(sid)
+
             cursor.execute("""
             INSERT OR REPLACE INTO students (
-                student_id, name, department, semester, cgpa, tenth_percentage, twelfth_percentage,
+                student_id, name, email, department, semester, cgpa, tenth_percentage, twelfth_percentage,
                 backlogs, python_score, java_score, sql_score, dsa_score, cloud_score, web_score,
                 ml_score, cybersecurity_score, certifications, project_count, project_complexity,
                 internships, opensource_projects, quantitative_aptitude, logical_aptitude,
                 coding_score, communication_score, presentation_score, interview_score, hackathons,
                 leadership, target_role, placed, data_source, profile_completeness, evidence_confidence
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
-                r["student_id"], r.get("name", f"Student {r['student_id']}"), r["department"], r["semester"],
+                sid, r.get("name", f"Student {sid}"), email_val, r["department"], r["semester"],
                 r["cgpa"], r["tenth_percentage"], r["twelfth_percentage"], r["backlogs"], r["python_score"],
                 r["java_score"], r["sql_score"], r["dsa_score"], r["cloud_score"], r["web_score"], r["ml_score"],
                 r["cybersecurity_score"], r["certifications"], r["project_count"], r["project_complexity"],
@@ -108,7 +155,7 @@ def init_db():
         # Seed trajectory snapshots for all 13 demo personas
         seed_trajectories(cursor)
         conn.commit()
-        print("[OK] Synchronized SQLite Database with 600 student records and demo trajectories.")
+        print("[OK] Synchronized SQLite Database with 610 student records and demo trajectories.")
 
     conn.close()
 
@@ -140,4 +187,59 @@ def seed_trajectories(cursor):
             cursor.execute(
                 "INSERT INTO trajectory_snapshots (student_id, month, readiness_score, status) VALUES (?, ?, ?, ?)",
                 (sid, m, s, status_text)
+            )
+
+def seed_demo_users(cursor):
+    """
+    Idempotently seeds authentication records for the 13 demo student personas
+    and institutional TPO/RPO accounts with bcrypt-hashed passwords.
+    """
+    from app.services.password_service import hash_password
+
+    demo_students = [
+        ("ST_DEMO_001", "ananya@placementiq.demo", "demo123"),
+        ("ST_DEMO_002", "rahul@placementiq.demo", "demo123"),
+        ("ST_DEMO_003", "priya@placementiq.demo", "demo123"),
+        ("ST_DEMO_004", "sneha@placementiq.demo", "demo123"),
+        ("ST_DEMO_005", "arjun@placementiq.demo", "demo123"),
+        ("ST_DEMO_006", "meera@placementiq.demo", "demo123"),
+        ("ST_DEMO_007", "karan@placementiq.demo", "demo123"),
+        ("ST_DEMO_008", "divya@placementiq.demo", "demo123"),
+        ("ST_DEMO_009", "rohan@placementiq.demo", "demo123"),
+        ("ST_DEMO_010", "nisha@placementiq.demo", "demo123"),
+        ("ST_DEMO_011", "vivek@placementiq.demo", "demo123"),
+        ("ST_DEMO_012", "pooja@placementiq.demo", "demo123"),
+        ("ST_DEMO_013", "aditya@placementiq.demo", "demo123"),
+        ("ST_DEMO_001", "student@placementiq.demo", "demo123"),
+    ]
+
+    demo_tpos = [
+        ("tpo@placementiq.demo", "tpo123", "tpo"),
+        ("rpo@placementiq.demo", "tpo123", "tpo"),
+    ]
+
+    for sid, email, pwd in demo_students:
+        email_clean = email.strip().lower()
+        cursor.execute("SELECT id FROM users WHERE LOWER(email) = ?", (email_clean,))
+        if not cursor.fetchone():
+            pwd_hash = hash_password(pwd)
+            cursor.execute(
+                """
+                INSERT INTO users (email, password_hash, role, student_id, is_active)
+                VALUES (?, ?, ?, ?, 1)
+                """,
+                (email_clean, pwd_hash, "student", sid)
+            )
+
+    for email, pwd, role in demo_tpos:
+        email_clean = email.strip().lower()
+        cursor.execute("SELECT id FROM users WHERE LOWER(email) = ?", (email_clean,))
+        if not cursor.fetchone():
+            pwd_hash = hash_password(pwd)
+            cursor.execute(
+                """
+                INSERT INTO users (email, password_hash, role, student_id, is_active)
+                VALUES (?, ?, ?, ?, 1)
+                """,
+                (email_clean, pwd_hash, role, None)
             )

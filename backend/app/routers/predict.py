@@ -10,12 +10,16 @@ from app.services.intelligence_engine import (
     calculate_minimum_improvement,
     calculate_roadmap
 )
+from app.services.auth_service import get_current_user, verify_student_ownership
 
 
 router = APIRouter(prefix="/api", tags=["prediction"])
 
 @router.post("/predict")
-def predict_features(req: PredictionRequest):
+def predict_features(req: PredictionRequest, current_user: dict = Depends(get_current_user)):
+    if req.student_id and req.student_id != "CUSTOM":
+        verify_student_ownership(req.student_id, current_user)
+
     pred = model_service.predict(req.features)
     career_fit = calculate_career_fit(req.features)
 
@@ -39,7 +43,12 @@ def predict_features(req: PredictionRequest):
     }
 
 @router.post("/what-if")
-def what_if_simulation(req: WhatIfRequest, db: sqlite3.Connection = Depends(get_db)):
+def what_if_simulation(
+    req: WhatIfRequest,
+    current_user: dict = Depends(get_current_user),
+    db: sqlite3.Connection = Depends(get_db)
+):
+    verify_student_ownership(req.student_id, current_user)
     cursor = db.cursor()
     cursor.execute("SELECT * FROM students WHERE student_id = ?", (req.student_id,))
     row = cursor.fetchone()
@@ -87,7 +96,13 @@ def what_if_simulation(req: WhatIfRequest, db: sqlite3.Connection = Depends(get_
     }
 
 @router.get("/skill-gaps/{student_id}")
-def get_skill_gaps(student_id: str, role: str = "Data Analyst", db: sqlite3.Connection = Depends(get_db)):
+def get_skill_gaps(
+    student_id: str,
+    role: str = "Data Analyst",
+    current_user: dict = Depends(get_current_user),
+    db: sqlite3.Connection = Depends(get_db)
+):
+    verify_student_ownership(student_id, current_user)
     cursor = db.cursor()
     cursor.execute("SELECT * FROM students WHERE student_id = ?", (student_id,))
     row = cursor.fetchone()
@@ -107,7 +122,12 @@ def get_skill_gaps(student_id: str, role: str = "Data Analyst", db: sqlite3.Conn
     }
 
 @router.get("/opportunity-cost/{student_id}")
-def get_opportunity_cost(student_id: str, db: sqlite3.Connection = Depends(get_db)):
+def get_opportunity_cost(
+    student_id: str,
+    current_user: dict = Depends(get_current_user),
+    db: sqlite3.Connection = Depends(get_db)
+):
+    verify_student_ownership(student_id, current_user)
     cursor = db.cursor()
     cursor.execute("SELECT * FROM students WHERE student_id = ?", (student_id,))
     row = cursor.fetchone()
@@ -119,7 +139,13 @@ def get_opportunity_cost(student_id: str, db: sqlite3.Connection = Depends(get_d
     return {"student_id": student_id, "matrix": matrix, "data_provenance": "SIMULATED"}
 
 @router.get("/minimum-improvement/{student_id}")
-def get_minimum_improvement(student_id: str, target: float = 75.0, db: sqlite3.Connection = Depends(get_db)):
+def get_minimum_improvement(
+    student_id: str,
+    target: float = 75.0,
+    current_user: dict = Depends(get_current_user),
+    db: sqlite3.Connection = Depends(get_db)
+):
+    verify_student_ownership(student_id, current_user)
     cursor = db.cursor()
     cursor.execute("SELECT * FROM students WHERE student_id = ?", (student_id,))
     row = cursor.fetchone()
@@ -131,7 +157,13 @@ def get_minimum_improvement(student_id: str, target: float = 75.0, db: sqlite3.C
     return {"student_id": student_id, "result": res, "data_provenance": "SIMULATED"}
 
 @router.get("/roadmap/{student_id}")
-def get_roadmap(student_id: str, role: str = "Data Analyst", db: sqlite3.Connection = Depends(get_db)):
+def get_roadmap(
+    student_id: str,
+    role: str = "Data Analyst",
+    current_user: dict = Depends(get_current_user),
+    db: sqlite3.Connection = Depends(get_db)
+):
+    verify_student_ownership(student_id, current_user)
     cursor = db.cursor()
     cursor.execute("SELECT * FROM students WHERE student_id = ?", (student_id,))
     row = cursor.fetchone()

@@ -235,15 +235,21 @@ export interface GovernanceMetricsResponse {
 }
 
 export interface AuthUser {
+  id?: number | string;
   email: string;
-  id: string;
   name: string;
+  role?: string;
+  student_id?: string | null;
+  department?: string | null;
+  target_role?: string | null;
 }
 
 export interface LoginResponse {
   authenticated: boolean;
-  role: 'student' | 'rpo_tpo';
+  access_token: string;
+  token_type: string;
+  role: 'student' | 'rpo_tpo' | 'tpo';
   redirect: string;
-  token: string;
   user: AuthUser;
 }
+

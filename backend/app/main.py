@@ -1,6 +1,7 @@
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+from app.config import settings
 from app.database import init_db
 from app.services.model_service import model_service
 from app.routers import students, predict, tpo, simulator, tools, auth
@@ -14,18 +15,27 @@ app = FastAPI(
     version="2.0.0"
 )
 
+from starlette.exceptions import HTTPException as StarletteHTTPException
+
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
+    if isinstance(exc, StarletteHTTPException):
+        return JSONResponse(
+            status_code=exc.status_code,
+            content={"detail": exc.detail},
+            headers=getattr(exc, "headers", None)
+        )
     logger.error(f"Global exception caught: {exc}", exc_info=True)
     return JSONResponse(
         status_code=500,
         content={"error": "Internal Server Error", "detail": str(exc)}
     )
 
-# CORS setup for Vite frontend connection
+# CORS setup with centralized environment settings
+cors_origins = settings.CORS_ORIGINS if isinstance(settings.CORS_ORIGINS, list) else [settings.CORS_ORIGINS]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
