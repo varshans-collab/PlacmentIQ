@@ -5,6 +5,11 @@ import sqlite3
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(BASE_DIR, "backend"))
 
+# Set a secure test-only JWT_SECRET in environment before importing config
+TEST_JWT_SECRET = "test-secret-key-that-is-at-least-32-chars-long-for-tests"
+if os.environ.get("JWT_SECRET") in (None, "", "change-this-to-a-secure-random-secret-in-production", "dev-secret-key-placeholder-change-in-production"):
+    os.environ["JWT_SECRET"] = TEST_JWT_SECRET
+
 from app.config import DB_PATH
 from app.database import init_db, seed_demo_users
 from app.services.password_service import hash_password, verify_password

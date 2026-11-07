@@ -6,6 +6,11 @@ import json
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(BASE_DIR, "backend"))
 
+# Set a secure test-only JWT_SECRET in environment before importing services
+TEST_JWT_SECRET = "test-secret-key-that-is-at-least-32-chars-long-for-tests"
+if os.environ.get("JWT_SECRET") in (None, "", "change-this-to-a-secure-random-secret-in-production", "dev-secret-key-placeholder-change-in-production"):
+    os.environ["JWT_SECRET"] = TEST_JWT_SECRET
+
 from app.services.model_service import model_service
 from app.services.intelligence_engine import (
     calculate_career_fit,

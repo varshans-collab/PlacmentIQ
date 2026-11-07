@@ -9,6 +9,11 @@ from fastapi.testclient import TestClient
 # Add backend directory to sys.path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'backend')))
 
+# Set a secure test-only JWT_SECRET in environment before importing app
+TEST_JWT_SECRET = "test-secret-key-that-is-at-least-32-chars-long-for-tests"
+if os.environ.get("JWT_SECRET") in (None, "", "change-this-to-a-secure-random-secret-in-production", "dev-secret-key-placeholder-change-in-production"):
+    os.environ["JWT_SECRET"] = TEST_JWT_SECRET
+
 from app.main import app
 from app.config import settings, DB_PATH
 from app.services.auth_service import create_access_token, decode_access_token
@@ -313,6 +318,39 @@ class TestAuthJWT(unittest.TestCase):
         self.assertEqual(me_res.status_code, 200)
         self.assertEqual(me_res.json()["user"]["email"], "newstudent@example.com")
         self.assertEqual(me_res.json()["user"]["department"], "CSE")
+
+    def test_21_jwt_secret_validation_refuses_invalid_keys(self):
+        from app.config import Settings
+        from pydantic import ValidationError
+
+        # 1. Missing or empty secret
+        with self.assertRaises(ValidationError) as ctx:
+            Settings(JWT_SECRET="", _env_file=None)
+        self.assertIn("JWT_SECRET is missing or empty", str(ctx.exception))
+
+        # 2. Whitespace-only secret
+        with self.assertRaises(ValidationError) as ctx:
+            Settings(JWT_SECRET="   ", _env_file=None)
+        self.assertIn("JWT_SECRET is missing or empty", str(ctx.exception))
+
+        # 3. Placeholder from .env.example
+        with self.assertRaises(ValidationError) as ctx:
+            Settings(JWT_SECRET="change-this-to-a-secure-random-secret-in-production", _env_file=None)
+        self.assertIn("default placeholder text cannot be used", str(ctx.exception))
+
+        # 4. Legacy dev placeholder
+        with self.assertRaises(ValidationError) as ctx:
+            Settings(JWT_SECRET="dev-secret-key-placeholder-change-in-production", _env_file=None)
+        self.assertIn("default placeholder text cannot be used", str(ctx.exception))
+
+        # 5. Too short secret (< 32 characters)
+        with self.assertRaises(ValidationError) as ctx:
+            Settings(JWT_SECRET="short-secret-under-32-chars", _env_file=None)
+        self.assertIn("at least 32 characters long", str(ctx.exception))
+
+        # 6. Valid 32+ character secret succeeds
+        valid_settings = Settings(JWT_SECRET="valid-random-secret-with-at-least-32-characters-ok!", _env_file=None)
+        self.assertGreaterEqual(len(valid_settings.JWT_SECRET), 32)
 
 
 if __name__ == "__main__":

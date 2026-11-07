@@ -1,6 +1,6 @@
 import os
 import json
-from typing import List, Union
+from typing import List, Union, Any
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import field_validator
 
@@ -12,7 +12,7 @@ DB_PATH = os.path.join(BASE_DIR, "backend", "placementiq.db")
 
 class Settings(BaseSettings):
     DATABASE_URL: str = "sqlite:///backend/placementiq.db"
-    JWT_SECRET: str = "dev-secret-key-placeholder-change-in-production"
+    JWT_SECRET: str = ""
     JWT_ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 1440
     CORS_ORIGINS: Union[List[str], str] = [
@@ -23,6 +23,26 @@ class Settings(BaseSettings):
     ]
     ENVIRONMENT: str = "development"
     FRONTEND_URL: str = "http://localhost:5173"
+
+    @field_validator("JWT_SECRET", mode="before")
+    @classmethod
+    def validate_jwt_secret(cls, v: Any) -> str:
+        placeholder = "change-this-to-a-secure-random-secret-in-production"
+        dev_placeholder = "dev-secret-key-placeholder-change-in-production"
+        if not v or not str(v).strip():
+            raise ValueError(
+                "JWT_SECRET is missing or empty. A secure secret of at least 32 characters must be set in the environment or .env file."
+            )
+        v_clean = str(v).strip()
+        if v_clean in (placeholder, dev_placeholder):
+            raise ValueError(
+                "Insecure JWT_SECRET: default placeholder text cannot be used. Please set a secure random secret in your environment or .env file."
+            )
+        if len(v_clean) < 32:
+            raise ValueError(
+                "Insecure JWT_SECRET: secret must be at least 32 characters long."
+            )
+        return v_clean
 
     @field_validator("CORS_ORIGINS", mode="before")
     @classmethod
